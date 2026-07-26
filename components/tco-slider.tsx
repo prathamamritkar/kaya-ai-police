@@ -9,22 +9,34 @@ interface TCOSliderProps {
   onTCOChange?: (tcoCr: number) => void;
 }
 
+function calculateScenario(baseCapexCr: number, discountPercent: number, delayDays: number) {
+  const baseCapexInr = baseCapexCr * 10_000_000;
+  const adjustedCapexInr = baseCapexInr * (1 - discountPercent / 100);
+  const delayPenaltyInr = delayDays * 200_000;
+  const calculatedTco2Inr = adjustedCapexInr + delayPenaltyInr + 27_600_000;
+  return {
+    adjusted_capex_inr: adjustedCapexInr,
+    delay_penalty_inr: delayPenaltyInr,
+    calculated_tco2_inr: calculatedTco2Inr,
+    recommendation: delayDays > 5 || calculatedTco2Inr > 61_000_000 ? "REJECT" : "RECOMMENDED",
+  };
+}
+
 export default function TCOSlider({
   baseCapexCr = 3.8,
   onTCOChange,
 }: TCOSliderProps) {
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [delayDays, setDelayDays] = useState<number>(12);
-  const [result, setResult] = useState({
-    adjusted_capex_inr: baseCapexCr * 10_000_000,
-    delay_penalty_inr: delayDays * 200_000,
-    calculated_tco2_inr: baseCapexCr * 10_000_000 + delayDays * 200_000 + 27_600_000,
-    recommendation: "REJECTED",
-  });
+  const [result, setResult] = useState(() => calculateScenario(baseCapexCr, 0, 12));
   const [connection, setConnection] = useState<"live" | "offline">("offline");
 
   useEffect(() => {
     const controller = new AbortController();
+    const fallback = calculateScenario(baseCapexCr, discountPercent, delayDays);
+    setResult(fallback);
+    setConnection("offline");
+    onTCOChange?.(fallback.calculated_tco2_inr / 10_000_000);
     const timer = window.setTimeout(async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/bids/simulate`, {

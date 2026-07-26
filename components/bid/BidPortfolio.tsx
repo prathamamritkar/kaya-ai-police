@@ -2,13 +2,16 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ArrowRight, Search, SlidersHorizontal, X } from "lucide-react";
 import Card, { CardHeader } from "@/components/ui/Card";
 import PatrolBadge from "@/components/bid/PatrolBadge";
+import TCOSlider from "@/components/tco-slider";
+import Tooltip from "@/components/ui/Tooltip";
 import { BIDS, type Bid } from "@/lib/mockData";
 import { runAllPatrols } from "@/lib/patrols";
 import { COLORS } from "@/lib/constants";
+import { integritySignal, marketSignal } from "@/lib/integrity";
 
 const TcoChart = dynamic(() => import("@/components/bid/TcoChart"), {
   ssr: false,
@@ -35,6 +38,7 @@ export default function BidPortfolio() {
   const [complianceFilter, setComplianceFilter] = useState<ComplianceFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>(BIDS.map((bid) => bid.id));
   const [activeId, setActiveId] = useState("B");
+  const [scenario, setScenario] = useState<{ bidId: string; tcoCr: number } | null>(null);
 
   const filteredBids = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -50,6 +54,11 @@ export default function BidPortfolio() {
   const comparisonBids = filteredBids.filter((bid) => selectedIds.includes(bid.id));
   const activeBid = comparisonBids.find((bid) => bid.id === activeId) ?? comparisonBids[0];
   const canClear = query || decisionFilter !== "all" || complianceFilter !== "all";
+  const displayedTco = (bid: Bid) => scenario?.bidId === bid.id ? scenario.tcoCr : bid.tco2_cr;
+  const updateScenarioTco = useCallback((tcoCr: number) => {
+    if (!activeBid) return;
+    setScenario((current) => current?.bidId === activeBid.id && current.tcoCr === tcoCr ? current : { bidId: activeBid.id, tcoCr });
+  }, [activeBid?.id]);
 
   function toggleBid(id: string) {
     setSelectedIds((current) => {
@@ -115,17 +124,19 @@ export default function BidPortfolio() {
           <Card>
             <CardHeader title="Bid comparison" caption={`Showing ${comparisonBids.length} selected bid${comparisonBids.length === 1 ? "" : "s"}. Select a row to update the inspector.`} right={<span className="inline-flex items-center gap-1.5 text-xs text-text/50"><SlidersHorizontal className="h-3.5 w-3.5 text-blue" /> {filterLabel(complianceFilter)}</span>} />
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-sm">
-                <thead><tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-wide text-text/40"><th className="px-4 py-3 font-medium">Bid</th><th className="px-4 py-3 font-medium">Upfront</th><th className="px-4 py-3 font-medium">Engineering</th><th className="px-4 py-3 font-medium">Carbon</th><th className="px-4 py-3 font-medium">Vendor risk</th><th className="px-4 py-3 font-medium">Schedule</th><th className="px-4 py-3 font-medium">5-year TCO²</th><th className="px-4 py-3 font-medium">Decision</th></tr></thead>
+              <table className="w-full min-w-[1100px] text-sm">
+                <thead><tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-wide text-text/40"><th className="px-4 py-3 font-medium">Bid</th><th className="px-4 py-3 font-medium">Upfront</th><th className="px-4 py-3 font-medium">Engineering</th><th className="px-4 py-3 font-medium">Carbon / market</th><th className="px-4 py-3 font-medium">Vendor risk</th><th className="px-4 py-3 font-medium">ACI</th><th className="px-4 py-3 font-medium">Integrity</th><th className="px-4 py-3 font-medium">Schedule</th><th className="px-4 py-3 font-medium">5-year TCO²</th><th className="px-4 py-3 font-medium">Decision</th></tr></thead>
                 <tbody>{comparisonBids.map((bid) => {
                   const { building, green, vice, traffic } = runAllPatrols(bid);
+                  const integrity = integritySignal(bid);
+                  const market = marketSignal(bid);
                   const isActive = bid.id === activeBid?.id;
                   const decisionColor = bid.recommendation === "REJECT" ? COLORS.rose : bid.recommendation === "ACCEPTABLE" ? COLORS.amber : COLORS.cyan;
-                  return <tr key={bid.id} onClick={() => setActiveId(bid.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setActiveId(bid.id); } }} role="button" tabIndex={0} aria-label={`Inspect ${bid.vendor}`} className={`cursor-pointer border-b border-white/5 transition-colors ${isActive ? "bg-cyan/[0.06]" : "hover:bg-white/[0.025]"}`}><td className="px-4 py-3"><p className="font-medium text-text">{bid.vendor}</p><p className="mt-0.5 text-xs text-text/40">{bid.model}</p></td><td className="px-4 py-3 font-mono text-text/80">₹{bid.upfront_cost_cr.toFixed(1)} Cr</td><td className="px-4 py-3"><PatrolBadge status={building.status} size="sm" /></td><td className="px-4 py-3"><PatrolBadge status={green.status} size="sm" /></td><td className="px-4 py-3 font-mono" style={{ color: (vice.riskScore ?? 0) > 6 ? COLORS.rose : COLORS.cyan }}>{vice.riskScore ?? 0}/10</td><td className="px-4 py-3 font-mono text-text/75">p95 {traffic.p95_days}d</td><td className="px-4 py-3 font-mono text-text/80">₹{bid.tco2_cr.toFixed(1)} Cr</td><td className="px-4 py-3"><span className="rounded px-2 py-1 text-[10px] font-bold uppercase" style={{ color: decisionColor, backgroundColor: `${decisionColor}18` }}>{bid.recommendation}</span></td></tr>;
+                  return <tr key={bid.id} onClick={() => setActiveId(bid.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setActiveId(bid.id); } }} role="button" tabIndex={0} aria-label={`Inspect ${bid.vendor}`} className={`cursor-pointer border-b border-white/5 transition-colors ${isActive ? "bg-cyan/[0.06]" : "hover:bg-white/[0.025]"}`}><td className="px-4 py-3"><p className="font-medium text-text">{bid.vendor}</p><p className="mt-0.5 text-xs text-text/40">{bid.model}</p></td><td className="px-4 py-3 font-mono text-text/80">₹{bid.upfront_cost_cr.toFixed(1)} Cr</td><td className="px-4 py-3"><PatrolBadge status={building.status} size="sm" /></td><td className="px-4 py-3"><PatrolBadge status={green.status} size="sm" /><p className={`mt-1 font-mono text-[10px] ${market.anomaly ? "text-amber" : "text-text/40"}`}>{market.label}</p></td><td className="px-4 py-3 font-mono" style={{ color: (vice.riskScore ?? 0) > 6 ? COLORS.rose : COLORS.cyan }}>{vice.riskScore ?? 0}/10</td><td className="px-4 py-3 font-mono font-bold" style={{ color: integrity.status === "FLAG" ? COLORS.rose : COLORS.cyan }}>{integrity.aci}</td><td className="px-4 py-3"><Tooltip text={`[${integrity.status}] ${integrity.metadata.map((detail) => `${detail.label}: ${detail.value}`).join(" · ")}`}><span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold" style={{ color: integrity.status === "FLAG" ? COLORS.rose : COLORS.cyan }}><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: integrity.status === "FLAG" ? COLORS.rose : COLORS.cyan }} />{integrity.status}</span></Tooltip><p className="mt-1 max-w-[180px] font-mono text-[10px] leading-snug text-text/40">{integrity.summary}</p></td><td className="px-4 py-3 font-mono text-text/75">p95 {traffic.p95_days}d</td><td className={`px-4 py-3 font-mono text-text/80 ${scenario?.bidId === bid.id ? "animate-pulse" : ""}`}>₹{displayedTco(bid).toFixed(1)} Cr</td><td className="px-4 py-3"><span className="rounded px-2 py-1 text-[10px] font-bold uppercase" style={{ color: decisionColor, backgroundColor: `${decisionColor}18` }}>{bid.recommendation}</span></td></tr>;
                 })}</tbody>
               </table>
             </div>
-            <div className="p-4"><TcoChart data={comparisonBids.map((bid) => ({ vendor: bid.vendor.replace("Vendor ", "V"), Upfront: bid.upfront_cost_cr, "5-Year TCO²": bid.tco2_cr }))} /></div>
+            <div className="grid gap-4 p-4 2xl:grid-cols-2"><TcoChart data={comparisonBids.map((bid) => ({ vendor: bid.vendor.replace("Vendor ", "V"), Upfront: bid.upfront_cost_cr, "5-Year TCO²": displayedTco(bid) }))} />{activeBid && <TCOSlider key={activeBid.id} baseCapexCr={activeBid.upfront_cost_cr} onTCOChange={updateScenarioTco} />}</div>
           </Card>
 
           {activeBid && <BidInspector bid={activeBid} />}

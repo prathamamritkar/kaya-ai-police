@@ -11,6 +11,7 @@ import PatrolBadge from "@/components/bid/PatrolBadge";
 import EvidenceBoard from "@/components/bid/EvidenceBoard";
 import CADVisualizer from "@/components/cad-visualizer";
 import CaseFile from "@/components/agent/CaseFile";
+import ConfidenceHeatmap from "@/components/confidence-heatmap";
 
 type Tab = "decision" | "evidence" | "checks" | "consequences" | "activity";
 
@@ -124,6 +125,7 @@ function EvidenceTab({ bid }: { bid: Bid }) {
           </table>
         </div>
       </Card>
+      <ConfidenceHeatmap key={bid.id} bid={bid} />
       {bid.id === "B" && <CADVisualizer initialWidthM={2.1} doorLimitM={1.9} />}
     </div>
   );

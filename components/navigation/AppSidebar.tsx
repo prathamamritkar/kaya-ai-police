@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, FileText, ShieldCheck, Network, CalendarRange, ScrollText } from "lucide-react";
+import { ClipboardCheck, FileText, ShieldCheck, ScrollText } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Work queue", Icon: ClipboardCheck },
-  { href: "/bids", label: "Bids", Icon: FileText },
-  { href: "/suppliers", label: "Suppliers", Icon: Network },
-  { href: "/project-plan", label: "Project plan", Icon: CalendarRange },
+  { href: "/bids", label: "Dynamic docket", Icon: FileText },
   { href: "/audit", label: "Audit trail", Icon: ScrollText },
 ];
 

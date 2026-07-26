@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Bid, FIELD_CONFIDENCE } from "@/lib/mockData";
 
 interface ExtractedField {
   id: string;
@@ -11,53 +12,54 @@ interface ExtractedField {
   isVerified: boolean;
 }
 
-export default function ConfidenceHeatmap({
-  vendorName = "Vendor B (CoolTech)",
-}: {
-  vendorName?: string;
-}) {
-  const [fields, setFields] = useState<ExtractedField[]>([
+function fieldsForBid(bid: Bid): ExtractedField[] {
+  const confidence = FIELD_CONFIDENCE[bid.id] ?? {};
+  return [
     {
-      id: "f1",
-      name: "Substation Power Draw",
-      value: "1,400 kW",
-      confidence: 99,
-      source: "Page 34, Spec Table 2.1",
-      isVerified: true,
+      id: "power_draw_kw",
+      name: "Power draw",
+      value: `${bid.power_draw_kw.toLocaleString()} kW`,
+      confidence: Math.round((confidence.power_draw_kw ?? 0) * 100),
+      source: "Submitted specification table",
+      isVerified: (confidence.power_draw_kw ?? 0) >= 0.85,
     },
     {
-      id: "f2",
-      name: "Embodied Carbon Factor",
-      value: "540 kgCO2e/ton",
-      confidence: 97,
-      source: "Page 35, EPD Attachment",
-      isVerified: true,
+      id: "carbon_intensity_kgco2e",
+      name: "Embodied carbon",
+      value: `${bid.carbon_intensity_kgco2e.toLocaleString()} kgCO₂e`,
+      confidence: Math.round((confidence.carbon_intensity_kgco2e ?? 0) * 100),
+      source: "EPD attachment",
+      isVerified: (confidence.carbon_intensity_kgco2e ?? 0) >= 0.85,
     },
     {
-      id: "f3",
-      name: "Equipment Width Clearance",
-      value: "2.10 meters",
-      confidence: 82,
-      source: "Page 36, CAD Blueprint Annotation",
-      isVerified: false,
+      id: "floor_load_kg_m2",
+      name: "Floor load",
+      value: `${bid.floor_load_kg_m2.toLocaleString()} kg/m²`,
+      confidence: Math.round((confidence.floor_load_kg_m2 ?? 0) * 100),
+      source: "CAD drawing annotation",
+      isVerified: (confidence.floor_load_kg_m2 ?? 0) >= 0.85,
     },
     {
-      id: "f4",
-      name: "Upfront Capex Price",
-      value: "₹3,80,00,000 (INR 3.80 Cr)",
-      confidence: 100,
-      source: "Page 1, Commercial Terms",
-      isVerified: true,
+      id: "delivery_weeks",
+      name: "Delivery commitment",
+      value: `${bid.delivery_weeks} weeks`,
+      confidence: Math.round((confidence.delivery_weeks ?? 0) * 100),
+      source: "Commercial terms",
+      isVerified: (confidence.delivery_weeks ?? 0) >= 0.85,
     },
     {
-      id: "f5",
-      name: "OSHA Safety Form 300",
-      value: "MISSING / PENDING",
-      confidence: 95,
-      source: "Page 40, Compliance Annexure",
-      isVerified: true,
+      id: "has_safety_cert",
+      name: "Safety certificate",
+      value: bid.has_safety_cert ? "Present" : "Missing",
+      confidence: Math.round((confidence.has_safety_cert ?? 0) * 100),
+      source: "Compliance annexure",
+      isVerified: (confidence.has_safety_cert ?? 0) >= 0.85,
     },
-  ]);
+  ];
+}
+
+export default function ConfidenceHeatmap({ bid }: { bid: Bid }) {
+  const [fields, setFields] = useState<ExtractedField[]>(() => fieldsForBid(bid));
 
   const verifyField = (id: string) => {
     setFields((prev) =>
@@ -75,7 +77,7 @@ export default function ConfidenceHeatmap({
             EXTRACTION REVIEW
           </div>
           <h3 className="text-base font-bold flex items-center gap-2">
-            🔍 Extracted bid fields
+            Extraction confidence
           </h3>
         </div>
         <span
@@ -90,7 +92,7 @@ export default function ConfidenceHeatmap({
       </div>
 
       <p className="text-xs text-[#94a3b8] mb-3">
-        Confirm low-confidence fields before using them as evidence.
+        Confirm low-confidence fields before using them as evidence. Confirmation records reviewer acknowledgement in this browser session; it never changes the extracted value or deterministic result.
       </p>
 
       {/* Field List */}

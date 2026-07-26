@@ -53,18 +53,18 @@ export default function CaseFilesPanel() {
       <CardHeader
         title={
           <span className="flex items-center gap-2">
-            Review queue
+            Execution log
             <span className="flex h-1.5 w-1.5 items-center">
               <span className="h-1.5 w-1.5 animate-ping rounded-full bg-cyan/60" />
             </span>
           </span>
         }
-        caption="Items that need reviewer attention."
+        caption="Machine-generated actions await human approval."
       />
       <ul className="divide-y divide-white/5">
         {ITEMS.map((it, i) => {
           const body = (
-            <div className="flex gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]">
+            <div className="flex gap-3 px-4 py-3 font-mono transition-colors hover:bg-white/[0.03]">
               <span
                 className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
                 style={{ backgroundColor: `${it.color}1a` }}
@@ -72,7 +72,7 @@ export default function CaseFilesPanel() {
                 <it.icon className="h-3.5 w-3.5" style={{ color: it.color }} />
               </span>
               <div className="min-w-0">
-                <p className="text-xs leading-snug text-text/85">{it.title}</p>
+                <p className="text-xs leading-snug text-text/85">&gt; {it.title.replace("RFI draft for Vendor B: safety certificate missing", "DRAFTING_RFI · VENDOR_B").replace("Vendor B delivery history reviewed", "RETRIEVED_VENDOR_HISTORY · VENDOR_B").replace("Vendor B schedule exposure identified", "AWAITING_SCHEDULE_REVIEW · VENDOR_B").replace("Vendor A passed all checks", "CHECKS_COMPLETE · VENDOR_A")}</p>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="text-[11px] text-text/40">{it.meta}</span>
                   {it.mocked && <MockBadge />}

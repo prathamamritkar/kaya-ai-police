@@ -4,6 +4,7 @@ import Card, { CardHeader } from "@/components/ui/Card";
 import { BIDS } from "@/lib/mockData";
 import { runAllPatrols } from "@/lib/patrols";
 import { COLORS } from "@/lib/constants";
+import CaseFilesPanel from "@/components/precinct/CaseFilesPanel";
 
 type QueueItem = {
   bidId: string;
@@ -74,9 +75,10 @@ export default function WorkQueue() {
         ))}
       </section>
 
-      <Card>
-        <CardHeader title="Actions requiring attention" caption="Ordered by compliance impact, evidence gaps, and decision readiness." />
-        <ul className="divide-y divide-white/5">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <Card>
+          <CardHeader title="Actions requiring attention" caption="Ordered by compliance impact, evidence gaps, and decision readiness." />
+          <ul className="divide-y divide-white/5">
           {items.map((item, index) => {
             const style = urgencyStyle[item.urgency];
             const Icon = style.Icon;
@@ -99,8 +101,10 @@ export default function WorkQueue() {
               </li>
             );
           })}
-        </ul>
-      </Card>
+          </ul>
+        </Card>
+        <aside className="xl:sticky xl:top-5 xl:h-fit"><CaseFilesPanel /></aside>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import PatrolBadge from "@/components/bid/PatrolBadge";
 import Card, { CardHeader } from "@/components/ui/Card";
 import Tooltip from "@/components/ui/Tooltip";
 import { COLORS } from "@/lib/constants";
+import { integritySignal, marketSignal } from "@/lib/integrity";
 import { ChevronRight } from "lucide-react";
 
 function riskColor(risk: number) {
@@ -20,7 +21,7 @@ export default function ActiveBidsTable() {
   const rows = BIDS.map((b) => {
     const { building, green, vice } = runAllPatrols(b);
     const risk = vice.riskScore ?? 0;
-    return { bid: b, building, green, risk };
+    return { bid: b, building, green, risk, integrity: integritySignal(b), market: marketSignal(b) };
   });
 
   return (
@@ -41,6 +42,8 @@ export default function ActiveBidsTable() {
               <th className="px-4 py-2.5 font-medium">
                 <Tooltip term="Carbon">Carbon</Tooltip>
               </th>
+              <th className="px-4 py-2.5 font-medium">ACI</th>
+              <th className="px-4 py-2.5 font-medium">Integrity</th>
               <th className="px-4 py-2.5 font-medium">
                 <Tooltip term="Vendor reliability">Vendor risk</Tooltip>
               </th>
@@ -51,7 +54,7 @@ export default function ActiveBidsTable() {
             </tr>
           </thead>
           <tbody className="font-mono">
-            {rows.map(({ bid, building, green, risk }) => {
+            {rows.map(({ bid, building, green, risk, integrity, market }) => {
               const isReject = bid.recommendation === "REJECT";
               return (
                 <tr
@@ -96,6 +99,15 @@ export default function ActiveBidsTable() {
                   </td>
                   <td className="px-4 py-3">
                     <PatrolBadge status={green.status} size="sm" />
+                    <div className={`mt-1 font-mono text-[10px] ${market.anomaly ? "text-amber" : "text-text/40"}`}>{market.label}</div>
+                  </td>
+                  <td className="px-4 py-3 font-bold" style={{ color: integrity.status === "FLAG" ? COLORS.rose : COLORS.cyan }}>
+                    {integrity.aci}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Tooltip text={`[${integrity.status}] ${integrity.metadata.map((detail) => `${detail.label}: ${detail.value}`).join(" · ")}`}>
+                      <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold" style={{ color: integrity.status === "FLAG" ? COLORS.rose : COLORS.cyan }}><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: integrity.status === "FLAG" ? COLORS.rose : COLORS.cyan }} />{integrity.status}</span>
+                    </Tooltip>
                   </td>
                   <td className="px-4 py-3">
                     <span
